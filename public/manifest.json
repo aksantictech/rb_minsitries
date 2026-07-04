@@ -11,13 +11,13 @@
   "lang": "fr",
   "icons": [
     {
-      "src": "/images/logo_rb.PNG",
+      "src": "/images/logo_rb.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/images/logo_rb.PNG",
+      "src": "/images/logo_rb.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
