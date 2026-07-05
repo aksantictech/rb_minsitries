@@ -3,27 +3,32 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
+type ThemeMode = "dark" | "light";
+
+function applyTheme(theme: ThemeMode) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("rb-theme", theme);
+}
+
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<ThemeMode>("dark");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("rb-theme");
 
     if (savedTheme === "light" || savedTheme === "dark") {
       setTheme(savedTheme);
-      document.documentElement.dataset.theme = savedTheme;
+      applyTheme(savedTheme);
       return;
     }
 
-    document.documentElement.dataset.theme = "dark";
+    applyTheme("dark");
   }, []);
 
   function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-
+    const nextTheme: ThemeMode = theme === "dark" ? "light" : "dark";
     setTheme(nextTheme);
-    localStorage.setItem("rb-theme", nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
+    applyTheme(nextTheme);
   }
 
   return (

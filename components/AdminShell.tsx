@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -15,9 +16,11 @@ import {
   LogOut,
   Mail,
   Megaphone,
+  Menu,
   MessageCircleHeart,
   Send,
   Video,
+  X,
 } from "lucide-react";
 import { createClient } from "../lib/supabase/browser";
 
@@ -57,8 +60,10 @@ export default function AdminShell({
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   async function handleLogout() {
+    setIsMobileMenuOpen(false);
     await supabase.auth.signOut();
     router.push("/admin/login");
     router.refresh();
@@ -137,6 +142,15 @@ export default function AdminShell({
           >
             <ThemeToggle />
 
+            <button
+              type="button"
+              className="admin-mobile-menu-button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Ouvrir le menu admin"
+            >
+              <Menu size={22} />
+            </button>
+
             <Link
               href="/"
               style={{
@@ -157,29 +171,58 @@ export default function AdminShell({
               Page publique
             </Link>
           </div>
-
-          <details className="admin-mobile-details">
-            <summary>Menu admin complet</summary>
-
-            <nav>
-              {adminLinks.map((link) => {
-                const Icon = link.icon;
-
-                return (
-                  <Link key={link.href} href={link.href}>
-                    <Icon size={18} />
-                    {link.label}
-                  </Link>
-                );
-              })}
-
-              <button type="button" onClick={handleLogout}>
-                <LogOut size={18} />
-                Déconnexion
-              </button>
-            </nav>
-          </details>
         </header>
+
+        {isMobileMenuOpen ? (
+          <div
+            className="admin-mobile-menu-overlay"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        ) : null}
+
+        <aside
+          className={`admin-mobile-drawer ${isMobileMenuOpen ? "open" : ""}`}
+          aria-label="Menu admin mobile"
+        >
+          <div className="admin-mobile-drawer-head">
+            <div>
+              <strong>RB Ministries</strong>
+              <span>Menu admin</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Fermer le menu admin"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          <nav className="admin-mobile-drawer-nav">
+            {adminLinks.map((link) => {
+              const Icon = link.icon;
+              const isActive = isActivePath(pathname, link.href);
+
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={isActive ? "active" : ""}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Icon size={19} />
+                  {link.label}
+                </Link>
+              );
+            })}
+
+            <button type="button" onClick={handleLogout} className="danger">
+              <LogOut size={19} />
+              Déconnexion
+            </button>
+          </nav>
+        </aside>
 
         <div className="admin-content-wrap">{children}</div>
       </section>

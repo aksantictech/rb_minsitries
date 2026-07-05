@@ -1729,3 +1729,230 @@ html[data-theme="light"] .theme-toggle-btn {
     border-color: rgba(239, 68, 68, 0.25);
   }
 }
+/* =========================================================
+   RB ADMIN MOBILE HAMBURGER + THEME FIX
+   ========================================================= */
+
+.theme-toggle-btn {
+  border: 1px solid rgba(217, 164, 65, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cream, #fff7e6);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(217, 164, 65, 0.14);
+}
+
+/* Mode jour public */
+html[data-theme="light"] body,
+html[data-theme="light"] .page {
+  background:
+    radial-gradient(circle at top left, rgba(217, 164, 65, 0.18), transparent 34%),
+    linear-gradient(135deg, #fffdf7, #f8fafc 52%, #fff7e6) !important;
+  color: #111827 !important;
+}
+
+html[data-theme="light"] .card {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #111827 !important;
+  border-color: rgba(217, 164, 65, 0.28) !important;
+}
+
+html[data-theme="light"] .public-header {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-bottom-color: rgba(217, 164, 65, 0.22) !important;
+}
+
+html[data-theme="light"] .public-desktop-nav a,
+html[data-theme="light"] .public-brand-text strong {
+  color: #111827 !important;
+}
+
+html[data-theme="light"] .theme-toggle-btn {
+  background: #111827 !important;
+  color: #fff7e6 !important;
+}
+
+/* Mode jour admin */
+html[data-theme="light"] .admin-page {
+  background:
+    radial-gradient(circle at top left, rgba(217, 164, 65, 0.20), transparent 32%),
+    linear-gradient(135deg, #fffdf7, #f8fafc 52%, #fff7e6) !important;
+  color: #111827 !important;
+}
+
+html[data-theme="dark"] .admin-page {
+  background:
+    radial-gradient(circle at top left, rgba(217, 164, 65, 0.14), transparent 32%),
+    linear-gradient(135deg, #05070d, #020617 55%, #111827) !important;
+  color: #fff7e6 !important;
+}
+
+/* Ancien menu details masqué */
+.admin-mobile-details {
+  display: none !important;
+}
+
+/* Bouton hamburger admin */
+.admin-mobile-menu-button {
+  display: none;
+  border: 1px solid rgba(217, 164, 65, 0.32);
+  background: linear-gradient(135deg, #f6c453, #d9a441);
+  color: #111827;
+  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(217, 164, 65, 0.22);
+}
+
+/* Drawer mobile admin */
+.admin-mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.54);
+  backdrop-filter: blur(6px);
+  z-index: 9998;
+}
+
+.admin-mobile-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(88vw, 380px);
+  height: 100dvh;
+  background:
+    radial-gradient(circle at top left, rgba(217, 164, 65, 0.18), transparent 36%),
+    linear-gradient(180deg, #fffdf7, #ffffff 52%, #fff7e6);
+  border-left: 1px solid rgba(217, 164, 65, 0.26);
+  box-shadow: -24px 0 70px rgba(0, 0, 0, 0.28);
+  z-index: 9999;
+  transform: translateX(105%);
+  transition: transform 0.25s ease;
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.admin-mobile-drawer.open {
+  transform: translateX(0);
+}
+
+.admin-mobile-drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(217, 164, 65, 0.22);
+}
+
+.admin-mobile-drawer-head strong {
+  display: block;
+  font-size: 20px;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.admin-mobile-drawer-head span {
+  display: block;
+  color: #c88a20;
+  font-weight: 950;
+  margin-top: 3px;
+}
+
+.admin-mobile-drawer-head button {
+  border: 1px solid rgba(217, 164, 65, 0.24);
+  background: #ffffff;
+  color: #111827;
+  border-radius: 14px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.admin-mobile-drawer-nav {
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+}
+
+.admin-mobile-drawer-nav a,
+.admin-mobile-drawer-nav button {
+  min-height: 52px;
+  border-radius: 16px;
+  padding: 13px 14px;
+  border: 1px solid rgba(217, 164, 65, 0.2);
+  background: #ffffff;
+  color: #1f2937;
+  font-weight: 900;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.admin-mobile-drawer-nav a.active {
+  background: linear-gradient(135deg, #f6c453, #d9a441);
+  color: #111827;
+  border-color: rgba(217, 164, 65, 0.55);
+}
+
+.admin-mobile-drawer-nav button.danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* Affichage mobile admin */
+@media (max-width: 1050px) {
+  .admin-mobile-menu-button {
+    display: grid;
+  }
+
+  .admin-topbar {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    align-items: start !important;
+    gap: 14px !important;
+  }
+
+  .admin-topbar > div:first-child {
+    min-width: 0;
+  }
+
+  .admin-topbar > div:nth-child(2) {
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .admin-topbar > div:nth-child(2) a {
+    display: none !important;
+  }
+
+  .admin-topbar .theme-toggle-btn span {
+    display: none !important;
+  }
+
+  .admin-topbar .theme-toggle-btn {
+    width: 48px !important;
+    height: 48px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+}
