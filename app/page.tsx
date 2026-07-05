@@ -101,7 +101,7 @@ export default function HomePage() {
             </div>
 
             <div
-              className="card"
+              className="card pastor-intro-card"
               style={{
                 padding: 22,
                 marginTop: 10,
@@ -132,6 +132,16 @@ export default function HomePage() {
                 la prière, l’accompagnement spirituel et l’édification du peuple
                 de Dieu.
               </p>
+
+              <div className="mobile-pastor-inline-photo">
+                <Image
+                  src="/images/past_roy_bondo.png"
+                  alt="Pasteur Roy Bondo"
+                  width={420}
+                  height={520}
+                  priority
+                />
+              </div>
 
               <Link
                 href="/about"
@@ -182,7 +192,7 @@ export default function HomePage() {
               }}
             >
               <Image
-                src="/images/past_roy_bondo.PNG"
+                src="/images/past_roy_bondo.png"
                 alt="Pasteur Roy Bondo"
                 width={620}
                 height={760}
@@ -197,28 +207,14 @@ export default function HomePage() {
                 }}
               />
             </div>
-
-            <div
-              style={{
-                position: "relative",
-                zIndex: 2,
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 12,
-                marginTop: 16,
-              }}
-            >
-              <MiniStat value="PWA" label="Installable" />
-              <MiniStat value="24/7" label="Accessible" />
-              <MiniStat value="100%" label="Ministère" />
-            </div>
           </div>
         </div>
       </section>
 
-<LatestBookSection />
+      <LatestBookSection />
 
-<section className="section video-home-section" style={{ paddingTop: 0 }}>        <div className="container">
+      <section className="section video-home-section" style={{ paddingTop: 0 }}>
+        <div className="container">
           <div
             className="card"
             style={{
@@ -227,7 +223,6 @@ export default function HomePage() {
               marginBottom: 34,
             }}
           >
-
             <p
               style={{
                 color: "#facc15",
@@ -269,9 +264,11 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-<NotificationPrompt />
 
-<HomePublicationsSection />
+      <NotificationPrompt />
+
+      <HomePublicationsSection />
+
       <HomeTestimoniesSection />
 
       <HomeTeachingsSection />
@@ -318,23 +315,5 @@ export default function HomePage() {
         </div>
       </section>
     </main>
-  );
-}
-
-function MiniStat({ value, label }: { value: string; label: string }) {
-  return (
-    <div
-      style={{
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 18,
-        padding: 16,
-        background: "rgba(2,6,23,0.55)",
-      }}
-    >
-      <strong style={{ display: "block", color: "#facc15", fontSize: 22 }}>
-        {value}
-      </strong>
-      <span style={{ color: "#94a3b8", fontSize: 13 }}>{label}</span>
-    </div>
   );
 }

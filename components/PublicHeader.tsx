@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import ThemeToggle from "./ThemeToggle";
 
 const links = [
   { href: "/", label: "Accueil" },
@@ -38,7 +39,9 @@ export default function PublicHeader() {
               {link.label}
             </Link>
           ))}
+        </nav>
 
+        <div className="public-header-actions">
           <Link href="/appointment" className="public-header-btn primary">
             Rendez-vous
           </Link>
@@ -46,7 +49,9 @@ export default function PublicHeader() {
           <Link href="/admin/login" className="public-header-btn secondary">
             Espace privé
           </Link>
-        </nav>
+
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

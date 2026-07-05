@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
@@ -107,7 +108,11 @@ export default function AdminShell({
             })}
           </nav>
 
-          <button type="button" onClick={handleLogout} className="admin-logout-btn">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="admin-logout-btn"
+          >
             <LogOut size={18} />
             Déconnexion
           </button>
@@ -122,10 +127,58 @@ export default function AdminShell({
             <span>{subtitle}</span>
           </div>
 
-          <Link href="/" className="admin-public-link">
-            <Home size={18} />
-            Page publique
-          </Link>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <ThemeToggle />
+
+            <Link
+              href="/"
+              style={{
+                textDecoration: "none",
+                border: "1px solid rgba(217,164,65,0.28)",
+                background: "rgba(255,255,255,0.78)",
+                color: "#374151",
+                padding: "12px 16px",
+                borderRadius: 999,
+                fontWeight: 900,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                whiteSpace: "nowrap",
+              }}
+            >
+              <Home size={18} />
+              Page publique
+            </Link>
+          </div>
+
+          <details className="admin-mobile-details">
+            <summary>Menu admin complet</summary>
+
+            <nav>
+              {adminLinks.map((link) => {
+                const Icon = link.icon;
+
+                return (
+                  <Link key={link.href} href={link.href}>
+                    <Icon size={18} />
+                    {link.label}
+                  </Link>
+                );
+              })}
+
+              <button type="button" onClick={handleLogout}>
+                <LogOut size={18} />
+                Déconnexion
+              </button>
+            </nav>
+          </details>
         </header>
 
         <div className="admin-content-wrap">{children}</div>

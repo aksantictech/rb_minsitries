@@ -1242,3 +1242,490 @@ video {
     justify-content: center !important;
   }
 }
+/* =========================================================
+   THEME TOGGLE — JOUR / NUIT
+   ========================================================= */
+
+.theme-toggle-btn {
+  border: 1px solid rgba(217, 164, 65, 0.28);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--cream);
+  border-radius: 999px;
+  padding: 11px 14px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(217, 164, 65, 0.12);
+}
+
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at top left, rgba(217, 164, 65, 0.18), transparent 32%),
+    linear-gradient(135deg, #fffdf7, #f8fafc 50%, #fff7e6);
+  color: #111827;
+}
+
+html[data-theme="light"] .page {
+  color: #111827;
+}
+
+html[data-theme="light"] .card {
+  background: rgba(255, 255, 255, 0.86) !important;
+  color: #111827 !important;
+  border-color: rgba(217, 164, 65, 0.28) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-theme="light"] p,
+html[data-theme="light"] span,
+html[data-theme="light"] h1,
+html[data-theme="light"] h2,
+html[data-theme="light"] h3 {
+  color: inherit;
+}
+
+html[data-theme="light"] .theme-toggle-btn {
+  background: #111827;
+  color: #fff7e6;
+}
+
+@media (max-width: 820px) {
+  .theme-toggle-btn {
+    padding: 9px 11px;
+    font-size: 12px;
+  }
+}
+/* =========================================================
+   ADMIN MOBILE MENU COMPLET
+   ========================================================= */
+
+.admin-mobile-details {
+  display: none;
+}
+
+@media (max-width: 1050px) {
+  .admin-mobile-details {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .admin-mobile-details summary {
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid rgba(217, 164, 65, 0.28);
+    background: linear-gradient(135deg, #f6c453, #d9a441);
+    color: #111827;
+    border-radius: 18px;
+    padding: 14px 16px;
+    font-weight: 950;
+    text-align: center;
+  }
+
+  .admin-mobile-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .admin-mobile-details nav {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(217, 164, 65, 0.18);
+  }
+
+  .admin-mobile-details nav a,
+  .admin-mobile-details nav button {
+    width: 100%;
+    min-height: 50px;
+    border-radius: 16px;
+    padding: 12px 14px;
+    border: 1px solid rgba(217, 164, 65, 0.18);
+    background: #ffffff;
+    color: #1f2937;
+    font-weight: 900;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .admin-mobile-details nav button {
+    color: #991b1b;
+    background: #fef2f2;
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+}
+/* =========================================================
+   PHOTO PASTEUR MOBILE DANS LA PRÉSENTATION
+   ========================================================= */
+
+.mobile-pastor-inline-photo {
+  display: none;
+}
+
+@keyframes pastorMobileFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-6px) scale(1.015);
+  }
+}
+
+@media (max-width: 820px) {
+  .mobile-pastor-inline-photo {
+    display: block;
+    margin: 18px 0 8px;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid rgba(217, 164, 65, 0.24);
+    background: rgba(2, 6, 23, 0.56);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+  }
+
+  .mobile-pastor-inline-photo img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    animation: pastorMobileFloat 5s ease-in-out infinite;
+  }
+
+  .home-page .pastor-photo-card {
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   RB MINISTRIES — PATCH MOBILE / ADMIN / THEME
+   À coller tout en bas de app/globals.css
+   ========================================================= */
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img,
+iframe,
+video {
+  max-width: 100%;
+}
+
+.theme-toggle-btn {
+  border: 1px solid rgba(217, 164, 65, 0.28);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--cream, #fff7e6);
+  border-radius: 999px;
+  padding: 11px 14px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  white-space: nowrap;
+}
+
+.theme-toggle-btn:hover {
+  transform: translateY(-2px);
+  background: rgba(217, 164, 65, 0.12);
+}
+
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at top left, rgba(217, 164, 65, 0.18), transparent 32%),
+    linear-gradient(135deg, #fffdf7, #f8fafc 50%, #fff7e6);
+  color: #111827;
+}
+
+html[data-theme="light"] .page,
+html[data-theme="light"] .admin-page {
+  color: #111827;
+}
+
+html[data-theme="light"] .card {
+  background: rgba(255, 255, 255, 0.88) !important;
+  color: #111827 !important;
+  border-color: rgba(217, 164, 65, 0.28) !important;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-theme="light"] .theme-toggle-btn {
+  background: #111827;
+  color: #fff7e6;
+}
+
+.mobile-pastor-inline-photo {
+  display: none;
+}
+
+@keyframes pastorMobileFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-6px) scale(1.015);
+  }
+}
+
+.admin-mobile-details {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  body {
+    padding-bottom: 98px;
+  }
+
+  .container {
+    width: min(100% - 28px, 1180px) !important;
+    max-width: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .public-header-inner {
+    min-height: 76px !important;
+  }
+
+  .public-desktop-nav,
+  .public-header-actions {
+    display: none !important;
+  }
+
+  .public-brand-link {
+    max-width: 100% !important;
+  }
+
+  .header-logo-frame {
+    width: 64px !important;
+    height: 58px !important;
+    border-radius: 18px !important;
+  }
+
+  .header-logo-img {
+    width: 54px !important;
+    height: 48px !important;
+    object-fit: contain !important;
+  }
+
+  .home-page .hero-section {
+    padding: 26px 0 28px !important;
+  }
+
+  .home-page .section {
+    padding: 22px 0 !important;
+  }
+
+  .home-page .hero-layout,
+  .home-page .grid-2,
+  .home-page .grid-3,
+  .home-page [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-page .card {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 22px !important;
+    padding: 20px !important;
+    overflow: hidden !important;
+  }
+
+  .home-page h1 {
+    font-size: clamp(42px, 13vw, 58px) !important;
+    line-height: 0.96 !important;
+    letter-spacing: -0.04em !important;
+  }
+
+  .home-page h2 {
+    font-size: clamp(28px, 9vw, 42px) !important;
+    line-height: 1.06 !important;
+  }
+
+  .home-page p {
+    font-size: 16px !important;
+    line-height: 1.72 !important;
+  }
+
+  .home-page p,
+  .home-page span,
+  .home-page strong,
+  .home-page a,
+  .home-page li {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    hyphens: none !important;
+  }
+
+  .home-page .btn {
+    min-height: 52px !important;
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .home-page .social-link {
+    flex: 1 1 30% !important;
+    text-align: center !important;
+    padding: 11px 10px !important;
+  }
+
+  .mobile-pastor-inline-photo {
+    display: block;
+    margin: 18px 0 8px;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid rgba(217, 164, 65, 0.24);
+    background: rgba(2, 6, 23, 0.56);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+  }
+
+  .mobile-pastor-inline-photo img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    animation: pastorMobileFloat 5s ease-in-out infinite;
+  }
+
+  .home-page .pastor-photo-card {
+    display: none !important;
+  }
+
+  .home-page .video-frame {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    min-height: auto !important;
+    border-radius: 18px !important;
+  }
+
+  .home-page img[src*="livre_jesus_agit_encore"] {
+    max-width: 260px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    display: block !important;
+  }
+
+  .home-page .section + .section {
+    padding-top: 12px !important;
+  }
+}
+
+@media (max-width: 1050px) {
+  .admin-shell-sidebar {
+    display: none !important;
+  }
+
+  .admin-shell-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding-bottom: 100px !important;
+  }
+
+  .admin-topbar {
+    min-height: auto !important;
+    padding: 22px 18px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 60 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(16px) !important;
+    border-bottom: 1px solid rgba(217, 164, 65, 0.22) !important;
+    display: block !important;
+  }
+
+  .admin-topbar h1 {
+    font-size: clamp(28px, 9vw, 42px) !important;
+    line-height: 1.02 !important;
+    letter-spacing: -0.04em !important;
+    color: #111827 !important;
+  }
+
+  .admin-content-wrap,
+  .admin-shell-main > div {
+    padding: 18px !important;
+  }
+
+  .admin-page [style*="grid-template-columns"],
+  .admin-page .grid-2,
+  .admin-page .grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-mobile-details {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .admin-mobile-details summary {
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid rgba(217, 164, 65, 0.28);
+    background: linear-gradient(135deg, #f6c453, #d9a441);
+    color: #111827;
+    border-radius: 18px;
+    padding: 14px 16px;
+    font-weight: 950;
+    text-align: center;
+  }
+
+  .admin-mobile-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .admin-mobile-details nav {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(217, 164, 65, 0.18);
+  }
+
+  .admin-mobile-details nav a,
+  .admin-mobile-details nav button {
+    width: 100%;
+    min-height: 50px;
+    border-radius: 16px;
+    padding: 12px 14px;
+    border: 1px solid rgba(217, 164, 65, 0.18);
+    background: #ffffff;
+    color: #1f2937;
+    font-weight: 900;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .admin-mobile-details nav button {
+    color: #991b1b;
+    background: #fef2f2;
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+}
