@@ -1956,3 +1956,104 @@ html[data-theme="dark"] .admin-page {
     justify-content: center !important;
   }
 }
+/* HEADER PUBLIC — VERSION COMPACTE PRO */
+.public-header {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+}
+
+.public-header-compact {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 22px !important;
+  min-height: 92px !important;
+}
+
+.public-brand-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  text-decoration: none !important;
+  min-width: 230px !important;
+}
+
+.public-brand-text strong,
+.public-brand-text span {
+  display: block;
+  line-height: 1.04;
+  font-weight: 950;
+}
+
+.public-brand-text strong {
+  color: var(--cream);
+  font-size: 19px;
+}
+
+.public-brand-text span {
+  color: var(--gold-bright);
+  font-size: 20px;
+}
+
+.public-desktop-nav {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: clamp(14px, 1.4vw, 24px) !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+}
+
+.public-desktop-nav a {
+  color: var(--cream);
+  text-decoration: none;
+  font-weight: 900;
+  font-size: clamp(14px, 0.92vw, 16px);
+}
+
+.public-header-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  white-space: nowrap !important;
+}
+
+.public-header-btn {
+  min-height: 46px !important;
+  padding: 11px 18px !important;
+  border-radius: 999px !important;
+  font-size: 15px !important;
+  font-weight: 950 !important;
+  text-decoration: none !important;
+}
+
+.public-header-btn.secondary {
+  color: var(--cream);
+  border: 1px solid rgba(217, 164, 65, 0.32);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.public-header .theme-toggle-btn {
+  min-height: 46px !important;
+  padding: 10px 14px !important;
+}
+
+/* Sur tablette/mobile, on garde le header simple + navigation basse */
+@media (max-width: 1050px) {
+  .public-header-compact {
+    display: flex !important;
+    justify-content: space-between !important;
+    min-height: 78px !important;
+  }
+
+  .public-desktop-nav,
+  .public-header-actions {
+    display: none !important;
+  }
+
+  .public-brand-link {
+    min-width: 0 !important;
+  }
+}

@@ -14,7 +14,7 @@ const links = [
 export default function PublicHeader() {
   return (
     <header className="public-header">
-      <div className="container public-header-inner">
+      <div className="container public-header-inner public-header-compact">
         <Link href="/" className="public-brand-link">
           <div className="public-brand-logo header-logo-frame">
             <Image
@@ -42,10 +42,6 @@ export default function PublicHeader() {
         </nav>
 
         <div className="public-header-actions">
-          <Link href="/appointment" className="public-header-btn primary">
-            Rendez-vous
-          </Link>
-
           <Link href="/admin/login" className="public-header-btn secondary">
             Espace privé
           </Link>
