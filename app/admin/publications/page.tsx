@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import AdminShell from "../../../components/AdminShell";
 import { createClient } from "../../../lib/supabase/browser";
 
+type LanguageCode = "ln" | "sw" | "en" | "es";
+
 type Publication = {
   id: string;
   publication_type: string;
@@ -22,6 +24,22 @@ type Publication = {
   created_at: string;
 };
 
+type TranslationForm = Record<LanguageCode, { title: string; content: string; action_label: string }>;
+
+type ContentTranslation = {
+  language_code: LanguageCode;
+  title: string | null;
+  body: string | null;
+  action_label: string | null;
+};
+
+const translationLanguages: { code: LanguageCode; label: string }[] = [
+  { code: "ln", label: "Lingala" },
+  { code: "sw", label: "Swahili" },
+  { code: "en", label: "Anglais" },
+  { code: "es", label: "Espagnol" },
+];
+
 const initialForm = {
   publication_type: "encouragement",
   title: "",
@@ -35,6 +53,13 @@ const initialForm = {
   is_featured: false,
   notify_on_publish: true,
   created_by_name: "Pasteur Roy Bondo",
+};
+
+const initialTranslations: TranslationForm = {
+  ln: { title: "", content: "", action_label: "" },
+  sw: { title: "", content: "", action_label: "" },
+  en: { title: "", content: "", action_label: "" },
+  es: { title: "", content: "", action_label: "" },
 };
 
 function toDatetimeLocal(value: string | null) {
@@ -65,6 +90,7 @@ export default function AdminPublicationsPage() {
   const supabase = useMemo(() => createClient(), []);
   const [publications, setPublications] = useState<Publication[]>([]);
   const [form, setForm] = useState(initialForm);
+  const [translations, setTranslations] = useState<TranslationForm>(initialTranslations);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -96,9 +122,12 @@ export default function AdminPublicationsPage() {
 
   async function loadPublications() {
     setIsLoadingData(true);
+
     const { data, error } = await supabase
       .from("ministry_publications")
-      .select("id, publication_type, title, content, media_url, action_label, action_url, status, is_public, is_featured, notify_on_publish, scheduled_at, published_at, created_by_name, created_at")
+      .select(
+        "id, publication_type, title, content, media_url, action_label, action_url, status, is_public, is_featured, notify_on_publish, scheduled_at, published_at, created_by_name, created_at"
+      )
       .order("created_at", { ascending: false });
 
     if (error) setErrorMessage(error.message);
@@ -107,18 +136,49 @@ export default function AdminPublicationsPage() {
     setIsLoadingData(false);
   }
 
+  async function loadTranslations(publicationId: string) {
+    const { data } = await supabase
+      .from("content_translations")
+      .select("language_code, title, body, action_label")
+      .eq("source_table", "ministry_publications")
+      .eq("source_id", publicationId);
+
+    const nextTranslations: TranslationForm = structuredClone(initialTranslations);
+
+    ((data || []) as ContentTranslation[]).forEach((item) => {
+      nextTranslations[item.language_code] = {
+        title: item.title || "",
+        content: item.body || "",
+        action_label: item.action_label || "",
+      };
+    });
+
+    setTranslations(nextTranslations);
+  }
+
   function updateForm(field: keyof typeof form, value: string | boolean) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateTranslation(language: LanguageCode, field: "title" | "content" | "action_label", value: string) {
+    setTranslations((current) => ({
+      ...current,
+      [language]: {
+        ...current[language],
+        [field]: value,
+      },
+    }));
   }
 
   function resetForm() {
     setEditingId(null);
     setForm(initialForm);
+    setTranslations(initialTranslations);
     setErrorMessage("");
     setSuccessMessage("");
   }
 
-  function startEdit(publication: Publication) {
+  async function startEdit(publication: Publication) {
     setEditingId(publication.id);
     setForm({
       publication_type: publication.publication_type,
@@ -134,6 +194,7 @@ export default function AdminPublicationsPage() {
       notify_on_publish: publication.notify_on_publish,
       created_by_name: publication.created_by_name || "Pasteur Roy Bondo",
     });
+    await loadTranslations(publication.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -154,17 +215,37 @@ export default function AdminPublicationsPage() {
     });
   }
 
+  async function saveTranslations(publicationId: string) {
+    const rows = translationLanguages
+      .map((language) => ({
+        source_table: "ministry_publications",
+        source_id: publicationId,
+        language_code: language.code,
+        title: translations[language.code].title.trim() || null,
+        body: translations[language.code].content.trim() || null,
+        action_label: translations[language.code].action_label.trim() || null,
+        updated_at: new Date().toISOString(),
+      }))
+      .filter((row) => row.title || row.body || row.action_label);
+
+    if (rows.length === 0) return;
+
+    await supabase.from("content_translations").upsert(rows, {
+      onConflict: "source_table,source_id,language_code",
+    });
+  }
+
   async function handleSave() {
     setErrorMessage("");
     setSuccessMessage("");
 
     if (!form.title.trim()) {
-      setErrorMessage("Le titre est obligatoire.");
+      setErrorMessage("Le titre français est obligatoire.");
       return;
     }
 
     if (!form.content.trim()) {
-      setErrorMessage("Le message est obligatoire.");
+      setErrorMessage("Le message français est obligatoire.");
       return;
     }
 
@@ -195,20 +276,22 @@ export default function AdminPublicationsPage() {
       ? await supabase.from("ministry_publications").update(payload).eq("id", editingId).select("id").single()
       : await supabase.from("ministry_publications").insert(payload).select("id").single();
 
-    setIsSaving(false);
-
     if (result.error) {
+      setIsSaving(false);
       setErrorMessage(result.error.message);
       return;
     }
 
-    if (payload.status === "published" && payload.notify_on_publish && result.data?.id) {
-      await sendNotification(result.data.id);
+    if (result.data?.id) {
+      await saveTranslations(result.data.id);
+
+      if (payload.status === "published" && payload.notify_on_publish) {
+        await sendNotification(result.data.id);
+      }
     }
 
-    setSuccessMessage(
-      editingId ? "Publication modifiée avec succès." : "Publication ajoutée avec succès."
-    );
+    setIsSaving(false);
+    setSuccessMessage(editingId ? "Publication modifiée avec succès." : "Publication ajoutée avec succès.");
     resetForm();
     await loadPublications();
   }
@@ -216,6 +299,12 @@ export default function AdminPublicationsPage() {
   async function handleDelete(publication: Publication) {
     const confirmed = window.confirm(`Supprimer la publication : ${publication.title} ?`);
     if (!confirmed) return;
+
+    await supabase
+      .from("content_translations")
+      .delete()
+      .eq("source_table", "ministry_publications")
+      .eq("source_id", publication.id);
 
     const { error } = await supabase
       .from("ministry_publications")
@@ -240,7 +329,7 @@ export default function AdminPublicationsPage() {
   return (
     <AdminShell
       title="Publications du ministère"
-      subtitle="Programmer les messages d’encouragement, sorties de livre, vidéos, images et textes d’édification"
+      subtitle="Publier et traduire les messages d’encouragement, vidéos, images et annonces du ministère"
     >
       {errorMessage ? <Alert type="error" text={errorMessage} /> : null}
       {successMessage ? <Alert type="success" text={successMessage} /> : null}
@@ -254,11 +343,7 @@ export default function AdminPublicationsPage() {
           <div className="grid-2">
             <label className="label">
               Type de publication
-              <select
-                className="select"
-                value={form.publication_type}
-                onChange={(event) => updateForm("publication_type", event.target.value)}
-              >
+              <select className="select" value={form.publication_type} onChange={(event) => updateForm("publication_type", event.target.value)}>
                 <option value="encouragement">Message d’encouragement</option>
                 <option value="edification">Message d’édification</option>
                 <option value="book">Sortie de livre</option>
@@ -270,11 +355,7 @@ export default function AdminPublicationsPage() {
 
             <label className="label">
               Statut
-              <select
-                className="select"
-                value={form.status}
-                onChange={(event) => updateForm("status", event.target.value)}
-              >
+              <select className="select" value={form.status} onChange={(event) => updateForm("status", event.target.value)}>
                 <option value="draft">Brouillon</option>
                 <option value="scheduled">Planifié</option>
                 <option value="published">Publié maintenant</option>
@@ -284,77 +365,70 @@ export default function AdminPublicationsPage() {
           </div>
 
           <label className="label">
-            Titre
-            <input
-              className="input"
-              value={form.title}
-              onChange={(event) => updateForm("title", event.target.value)}
-              placeholder="Ex : Une parole d’encouragement pour cette semaine"
-            />
+            Titre original en français
+            <input className="input" value={form.title} onChange={(event) => updateForm("title", event.target.value)} placeholder="Ex : Une parole d’encouragement pour cette semaine" />
           </label>
 
           <label className="label">
-            Message
-            <textarea
-              className="textarea"
-              value={form.content}
-              onChange={(event) => updateForm("content", event.target.value)}
-              placeholder="Écrire le message à publier..."
-            />
+            Message original en français
+            <textarea className="textarea" value={form.content} onChange={(event) => updateForm("content", event.target.value)} placeholder="Écrire le message à publier..." />
           </label>
 
           <div className="grid-2">
             <label className="label">
               Média / image / vidéo URL
-              <input
-                className="input"
-                value={form.media_url}
-                onChange={(event) => updateForm("media_url", event.target.value)}
-                placeholder="/images/image.png ou https://youtube.com/..."
-              />
+              <input className="input" value={form.media_url} onChange={(event) => updateForm("media_url", event.target.value)} placeholder="/images/image.png ou https://youtube.com/..." />
             </label>
 
             <label className="label">
               Date de publication planifiée
-              <input
-                className="input"
-                type="datetime-local"
-                value={form.scheduled_at}
-                onChange={(event) => updateForm("scheduled_at", event.target.value)}
-              />
+              <input className="input" type="datetime-local" value={form.scheduled_at} onChange={(event) => updateForm("scheduled_at", event.target.value)} />
             </label>
           </div>
 
           <div className="grid-2">
             <label className="label">
-              Bouton d’action
-              <input
-                className="input"
-                value={form.action_label}
-                onChange={(event) => updateForm("action_label", event.target.value)}
-                placeholder="Lire la suite / Acheter / Regarder"
-              />
+              Bouton d’action français
+              <input className="input" value={form.action_label} onChange={(event) => updateForm("action_label", event.target.value)} placeholder="Lire la suite / Acheter / Regarder" />
             </label>
 
             <label className="label">
               Lien d’action
-              <input
-                className="input"
-                value={form.action_url}
-                onChange={(event) => updateForm("action_url", event.target.value)}
-                placeholder="/teachings ou https://..."
-              />
+              <input className="input" value={form.action_url} onChange={(event) => updateForm("action_url", event.target.value)} placeholder="/teachings ou https://..." />
             </label>
           </div>
 
           <label className="label">
             Auteur affiché
-            <input
-              className="input"
-              value={form.created_by_name}
-              onChange={(event) => updateForm("created_by_name", event.target.value)}
-            />
+            <input className="input" value={form.created_by_name} onChange={(event) => updateForm("created_by_name", event.target.value)} />
           </label>
+
+          <div className="card" style={{ padding: 22, background: "rgba(217,164,65,0.06)" }}>
+            <h3 style={{ marginTop: 0, color: "var(--gold-bright)" }}>Traductions de la publication</h3>
+            <p style={{ color: "var(--muted)", lineHeight: 1.6 }}>
+              Remplis les traductions disponibles. Si une langue est vide, l’application affichera automatiquement la version française.
+            </p>
+
+            <div style={{ display: "grid", gap: 18 }}>
+              {translationLanguages.map((language) => (
+                <div key={language.code} className="card" style={{ padding: 18 }}>
+                  <h4 style={{ marginTop: 0 }}>{language.label}</h4>
+                  <label className="label">
+                    Titre
+                    <input className="input" value={translations[language.code].title} onChange={(event) => updateTranslation(language.code, "title", event.target.value)} />
+                  </label>
+                  <label className="label">
+                    Message
+                    <textarea className="textarea" value={translations[language.code].content} onChange={(event) => updateTranslation(language.code, "content", event.target.value)} />
+                  </label>
+                  <label className="label">
+                    Bouton d’action
+                    <input className="input" value={translations[language.code].action_label} onChange={(event) => updateTranslation(language.code, "action_label", event.target.value)} />
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div style={{ display: "grid", gap: 12 }}>
             <Checkbox label="Visible sur la page publique" checked={form.is_public} onChange={(value) => updateForm("is_public", value)} />
@@ -398,9 +472,7 @@ export default function AdminPublicationsPage() {
               <div>
                 <h3 style={{ margin: 0 }}>{publication.title}</h3>
                 <p style={{ color: "var(--muted)", lineHeight: 1.6 }}>
-                  {publication.content.length > 180
-                    ? `${publication.content.slice(0, 180)}...`
-                    : publication.content}
+                  {publication.content.length > 180 ? `${publication.content.slice(0, 180)}...` : publication.content}
                 </p>
                 <p style={{ marginBottom: 0, fontWeight: 800 }}>
                   {publication.status} · {publication.publication_type} · {formatDate(publication.published_at || publication.scheduled_at || publication.created_at)}

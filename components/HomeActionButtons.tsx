@@ -1,45 +1,37 @@
+"use client";
+
 import Link from "next/link";
-import {
-  HandHeart,
-  HeartHandshake,
-  MessageCircleHeart,
-  PlayCircle,
-  Send,
-} from "lucide-react";
+import { HandHeart, MessageCircleHeart, Send, PlayCircle } from "lucide-react";
+import { useLanguage } from "./LanguageProvider";
 
 export default function HomeActionButtons() {
+  const { t } = useLanguage();
+
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 14,
-        flexWrap: "wrap",
-        marginTop: 28,
-      }}
-    >
+    <div className="home-action-buttons">
       <Link href="/prayer" className="btn btn-primary">
-        <HandHeart size={18} />
-        Demander une prière
+        <HandHeart size={20} />
+        {t("prayer")}
       </Link>
 
       <Link href="/teachings" className="btn btn-secondary">
-        <PlayCircle size={18} />
-        Voir les enseignements
-      </Link>
-
-      <Link href="/invitation" className="btn btn-secondary">
-        <Send size={18} />
-        Inviter le Pasteur
+        <PlayCircle size={20} />
+        {t("teachings")}
       </Link>
 
       <Link href="/testimony" className="btn btn-secondary">
-        <MessageCircleHeart size={18} />
-        Partager un témoignage
+        <MessageCircleHeart size={20} />
+        {t("shareTestimony")}
+      </Link>
+
+      <Link href="/invitation" className="btn btn-secondary">
+        <Send size={20} />
+        {t("invitePastor")}
       </Link>
 
       <Link href="/encouragement" className="btn btn-secondary">
-        <HeartHandshake size={18} />
-        Encouragement
+        <HandHeart size={20} />
+        {t("encouragement")}
       </Link>
     </div>
   );

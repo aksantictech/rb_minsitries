@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const links = [
   { href: "/", label: "Accueil" },
@@ -14,14 +15,14 @@ const links = [
 export default function PublicHeader() {
   return (
     <header className="public-header">
-      <div className="container public-header-inner public-header-compact">
+      <div className="public-header-inner">
         <Link href="/" className="public-brand-link">
           <div className="public-brand-logo header-logo-frame">
             <Image
               src="/images/logo_rb.png"
               alt="Logo Roy Bondo Ministries"
-              width={160}
-              height={120}
+              width={150}
+              height={115}
               priority
               className="header-logo-img"
             />
@@ -45,6 +46,8 @@ export default function PublicHeader() {
           <Link href="/admin/login" className="public-header-btn secondary">
             Espace privé
           </Link>
+
+          <LanguageSwitcher />
 
           <ThemeToggle />
         </div>

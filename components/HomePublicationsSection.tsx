@@ -1,9 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, CalendarClock, HeartHandshake, ImageIcon, PlayCircle, Quote } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  BookOpen,
+  CalendarClock,
+  HeartHandshake,
+  ImageIcon,
+  PlayCircle,
+  Quote,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "../lib/supabase/browser";
+import { useLanguage } from "./LanguageProvider";
+
+const localeByLanguage = {
+  fr: "fr-FR",
+  ln: "fr-CD",
+  sw: "sw-CD",
+  en: "en-US",
+  es: "es-ES",
+} as const;
 
 type Publication = {
   id: string;
@@ -18,6 +34,20 @@ type Publication = {
   created_at: string;
 };
 
+type ContentTranslation = {
+  source_id: string;
+  language_code: string;
+  title: string | null;
+  body: string | null;
+  action_label: string | null;
+};
+
+type DisplayPublication = Publication & {
+  displayTitle: string;
+  displayContent: string;
+  displayActionLabel: string | null;
+};
+
 function getIcon(type: string) {
   if (type === "book") return BookOpen;
   if (type === "video") return PlayCircle;
@@ -26,25 +56,26 @@ function getIcon(type: string) {
   return HeartHandshake;
 }
 
-function formatDate(value: string | null) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(value));
+function truncateText(value: string, maxLength = 110) {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
 export default function HomePublicationsSection() {
-  const supabase = createClient();
-  const [publications, setPublications] = useState<Publication[]>([]);
+  const supabase = useMemo(() => createClient(), []);
+  const { language } = useLanguage();
+
+  const [publications, setPublications] = useState<DisplayPublication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadPublications() {
+      setIsLoading(true);
+
       const { data } = await supabase
         .from("ministry_publications")
-        .select("id, publication_type, title, content, media_url, action_label, action_url, published_at, scheduled_at, created_at")
+        .select(
+          "id, publication_type, title, content, media_url, action_label, action_url, published_at, scheduled_at, created_at"
+        )
         .eq("is_public", true)
         .eq("status", "published")
         .lte("published_at", new Date().toISOString())
@@ -52,12 +83,51 @@ export default function HomePublicationsSection() {
         .order("published_at", { ascending: false })
         .limit(4);
 
-      setPublications((data || []) as Publication[]);
+      const rows = (data || []) as Publication[];
+
+      if (rows.length === 0) {
+        setPublications([]);
+        setIsLoading(false);
+        return;
+      }
+
+      let translations: ContentTranslation[] = [];
+
+      if (language !== "fr") {
+        const ids = rows.map((item) => item.id);
+        const { data: translationData } = await supabase
+          .from("content_translations")
+          .select("source_id, language_code, title, body, action_label")
+          .eq("source_table", "ministry_publications")
+          .eq("language_code", language)
+          .in("source_id", ids);
+
+        translations = (translationData || []) as ContentTranslation[];
+      }
+
+      const translationById = new Map(
+        translations.map((translation) => [translation.source_id, translation])
+      );
+
+      setPublications(
+        rows.map((publication) => {
+          const translation = translationById.get(publication.id);
+
+          return {
+            ...publication,
+            displayTitle: translation?.title || publication.title,
+            displayContent: translation?.body || publication.content,
+            displayActionLabel:
+              translation?.action_label || publication.action_label || null,
+          };
+        })
+      );
+
       setIsLoading(false);
     }
 
     loadPublications();
-  }, [supabase]);
+  }, [language, supabase]);
 
   if (isLoading || publications.length === 0) {
     return null;
@@ -65,9 +135,20 @@ export default function HomePublicationsSection() {
 
   const main = publications[0];
   const MainIcon = getIcon(main.publication_type);
+  const locale = localeByLanguage[language] || "fr-FR";
+
+  function formatDate(value: string | null) {
+    if (!value) return "";
+
+    return new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(value));
+  }
 
   return (
-    <section className="section" style={{ paddingTop: 18, paddingBottom: 22 }}>
+    <section className="section home-publications-section" style={{ paddingTop: 18, paddingBottom: 22 }}>
       <div className="container">
         <div
           className="card rb-gold-glow"
@@ -96,29 +177,41 @@ export default function HomePublicationsSection() {
 
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               <MainIcon color="var(--gold-bright)" size={38} />
-              <h2 style={{ fontSize: "clamp(30px, 4vw, 48px)", lineHeight: 1, margin: 0 }}>
-                {main.title}
+              <h2
+                style={{
+                  fontSize: "clamp(30px, 4vw, 48px)",
+                  lineHeight: 1,
+                  margin: 0,
+                }}
+              >
+                {main.displayTitle}
               </h2>
             </div>
 
-            <p style={{ color: "var(--muted)", lineHeight: 1.8, fontSize: 17, whiteSpace: "pre-line" }}>
-              {main.content}
+            <p
+              style={{
+                color: "var(--muted)",
+                lineHeight: 1.8,
+                fontSize: 17,
+                whiteSpace: "pre-line",
+              }}
+            >
+              {main.displayContent}
             </p>
 
             <p style={{ color: "var(--gold-bright)", fontWeight: 800 }}>
               {formatDate(main.published_at || main.scheduled_at || main.created_at)}
             </p>
 
-            {main.action_url ? (
-              <Link href={main.action_url} className="btn btn-primary">
-                {main.action_label || "Lire la suite"}
-              </Link>
-            ) : null}
+            <Link href={`/publications/${main.id}`} className="btn btn-primary">
+              {main.displayActionLabel || "Lire la suite"}
+            </Link>
           </div>
 
           <div style={{ display: "grid", gap: 12 }}>
             {publications.slice(1, 4).map((publication) => {
               const Icon = getIcon(publication.publication_type);
+
               return (
                 <article
                   key={publication.id}
@@ -134,26 +227,24 @@ export default function HomePublicationsSection() {
                 >
                   <Icon color="var(--gold-bright)" size={25} />
                   <div>
-                    <h3 style={{ margin: 0, fontSize: 18 }}>{publication.title}</h3>
+                    <h3 style={{ margin: 0, fontSize: 18 }}>
+                      {publication.displayTitle}
+                    </h3>
                     <p style={{ margin: "7px 0 0", color: "var(--muted)", lineHeight: 1.6 }}>
-                      {publication.content.length > 110
-                        ? `${publication.content.slice(0, 110)}...`
-                        : publication.content}
+                      {truncateText(publication.displayContent)}
                     </p>
-                    {publication.action_url ? (
-                      <Link
-                        href={publication.action_url}
-                        style={{
-                          color: "var(--gold-bright)",
-                          fontWeight: 900,
-                          textDecoration: "none",
-                          display: "inline-block",
-                          marginTop: 8,
-                        }}
-                      >
-                        {publication.action_label || "Voir"} →
-                      </Link>
-                    ) : null}
+                    <Link
+                      href={`/publications/${publication.id}`}
+                      style={{
+                        color: "var(--gold-bright)",
+                        fontWeight: 900,
+                        textDecoration: "none",
+                        display: "inline-block",
+                        marginTop: 8,
+                      }}
+                    >
+                      {publication.displayActionLabel || "Voir"} →
+                    </Link>
                   </div>
                 </article>
               );

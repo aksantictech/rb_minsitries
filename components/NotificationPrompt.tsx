@@ -2,6 +2,7 @@
 
 import { Bell, BellRing, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useLanguage } from "./LanguageProvider";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -17,6 +18,7 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export default function NotificationPrompt({ compact = false }: { compact?: boolean }) {
+  const { language, t } = useLanguage();
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -39,157 +41,119 @@ export default function NotificationPrompt({ compact = false }: { compact?: bool
   }, []);
 
   async function checkExistingSubscription() {
-    try {
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      const subscription = await registration.pushManager.getSubscription();
-      setIsSubscribed(Boolean(subscription));
-    } catch {
-      setIsSubscribed(false);
-    }
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    setIsSubscribed(Boolean(subscription));
   }
 
   async function enableNotifications() {
     setMessage("");
-
-    if (!isSupported) {
-      setMessage("Les notifications ne sont pas supportées par ce navigateur.");
-      return;
-    }
-
-    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-    if (!vapidPublicKey) {
-      setMessage("La clé publique VAPID n’est pas encore configurée.");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+      if (!publicKey) {
+        throw new Error("Clé publique VAPID manquante.");
+      }
+
       const nextPermission = await Notification.requestPermission();
       setPermission(nextPermission);
 
       if (nextPermission !== "granted") {
-        setMessage("Les notifications n’ont pas été activées.");
+        setMessage("Les notifications n’ont pas été autorisées sur ce téléphone.");
         setIsLoading(false);
         return;
       }
 
       const registration = await navigator.serviceWorker.register("/sw.js");
-      let subscription = await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        });
-      }
-
-      const subscriptionJson = subscription.toJSON();
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
 
       const response = await fetch("/api/notifications/subscribe", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          endpoint: subscription.endpoint,
-          keys: subscriptionJson.keys,
+          ...subscription.toJSON(),
           userAgent: navigator.userAgent,
+          languageCode: language,
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Impossible d’enregistrer l’abonnement.");
+        throw new Error(data.error || "Erreur d’abonnement aux notifications.");
       }
 
       setIsSubscribed(true);
-      setMessage("Notifications activées. Vous recevrez les publications du ministère.");
+      setMessage("Notifications activées avec succès.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Erreur d’activation des notifications.");
+      setMessage(error instanceof Error ? error.message : "Erreur inconnue.");
     }
 
     setIsLoading(false);
   }
 
-  if (!isSupported) {
-    return null;
-  }
+  if (!isSupported) return null;
 
-  if (compact) {
-    return (
-      <button
-        type="button"
-        onClick={enableNotifications}
-        disabled={isLoading || isSubscribed || permission === "denied"}
-        className="btn btn-secondary"
-        style={{ cursor: isLoading || isSubscribed ? "not-allowed" : "pointer" }}
-        title={message || "Activer les notifications"}
-      >
-        {isSubscribed ? <BellRing size={18} /> : <Bell size={18} />}
-        {isSubscribed ? "Notifications actives" : "Notifications"}
-      </button>
-    );
-  }
+  if (compact && isSubscribed) return null;
 
   return (
-    <section className="section" style={{ paddingTop: 12, paddingBottom: 18 }}>
+    <section className="section notification-section" style={{ paddingTop: compact ? 10 : 18, paddingBottom: compact ? 10 : 18 }}>
       <div className="container">
         <div
           className="card rb-gold-glow"
           style={{
-            padding: 24,
-            display: "flex",
+            padding: compact ? 18 : 24,
+            display: "grid",
+            gridTemplateColumns: "auto minmax(0, 1fr) auto",
+            gap: 18,
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: 20,
-            flexWrap: "wrap",
-            borderColor: "rgba(217,164,65,0.32)",
+            borderColor: "rgba(217,164,65,0.3)",
           }}
         >
-          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: 18,
-                background: "rgba(217,164,65,0.12)",
-                display: "grid",
-                placeItems: "center",
-                color: "var(--gold-bright)",
-              }}
-            >
-              <ShieldCheck size={27} />
-            </div>
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 18,
+              display: "grid",
+              placeItems: "center",
+              background: "rgba(217,164,65,0.12)",
+              color: "var(--gold-bright)",
+            }}
+          >
+            {isSubscribed ? <BellRing size={26} /> : <Bell size={26} />}
+          </div>
 
-            <div>
-              <h2 style={{ margin: 0, fontSize: 22 }}>Activez les notifications du ministère</h2>
-              <p style={{ margin: "7px 0 0", color: "var(--muted)", lineHeight: 1.6 }}>
-                Recevez les messages d’encouragement, nouvelles vidéos, sorties de livres et rappels spirituels directement sur votre téléphone.
+          <div>
+            <h2 style={{ margin: 0, fontSize: compact ? 20 : 26 }}>
+              {isSubscribed ? "Notifications activées" : t("notificationsTitle")}
+            </h2>
+            <p style={{ margin: "6px 0 0", color: "var(--muted)", lineHeight: 1.6 }}>
+              {isSubscribed
+                ? "Vous recevrez les publications du ministère dans la langue sélectionnée."
+                : t("notificationsText")}
+            </p>
+            {message ? (
+              <p style={{ margin: "8px 0 0", color: "var(--gold-bright)", fontWeight: 800 }}>
+                {message}
               </p>
-              {message ? (
-                <p style={{ margin: "8px 0 0", color: "var(--gold-bright)", fontWeight: 800 }}>
-                  {message}
-                </p>
-              ) : null}
-            </div>
+            ) : null}
           </div>
 
           <button
             type="button"
             className="btn btn-primary"
             onClick={enableNotifications}
-            disabled={isLoading || isSubscribed || permission === "denied"}
+            disabled={isLoading || permission === "denied" || isSubscribed}
             style={{ cursor: isLoading || isSubscribed ? "not-allowed" : "pointer" }}
           >
-            {isSubscribed ? <BellRing size={18} /> : <Bell size={18} />}
-            {isLoading
-              ? "Activation..."
-              : isSubscribed
-                ? "Notifications activées"
-                : permission === "denied"
-                  ? "Notifications bloquées"
-                  : "Activer les notifications"}
+            <ShieldCheck size={18} />
+            {isSubscribed ? "Activées" : isLoading ? "Activation..." : t("notificationsButton")}
           </button>
         </div>
       </div>

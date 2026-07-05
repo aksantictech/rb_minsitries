@@ -1,41 +1,39 @@
 "use client";
 
 import Link from "next/link";
+import { Bell, BookOpen, Home, LockKeyhole, MessageCircleHeart, PlayCircle } from "lucide-react";
 import { usePathname } from "next/navigation";
-import {
-  Bell,
-  BookOpen,
-  HeartHandshake,
-  Home,
-  LockKeyhole,
-  MessageCircleHeart,
-  PlayCircle,
-} from "lucide-react";
-
-const publicLinks = [
-  { href: "/", label: "Accueil", icon: Home },
-  { href: "/teachings", label: "Vidéos", icon: PlayCircle },
-  { href: "/testimonies", label: "Témoins", icon: MessageCircleHeart },
-  { href: "/prayer", label: "Prière", icon: HeartHandshake },
-  { href: "/admin/login", label: "Privé", icon: LockKeyhole },
-];
-
-const adminLinks = [
-  { href: "/admin", label: "Admin", icon: Home },
-  { href: "/admin/publications", label: "Publier", icon: Bell },
-  { href: "/admin/teachings", label: "Vidéos", icon: PlayCircle },
-  { href: "/admin/testimonies", label: "Témoins", icon: MessageCircleHeart },
-  { href: "/admin/books", label: "Livres", icon: BookOpen },
-];
+import { useLanguage } from "./LanguageProvider";
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
+  if (href === "/admin") return pathname.startsWith("/admin");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const links = pathname.startsWith("/admin") ? adminLinks : publicLinks;
+  const { t } = useLanguage();
+
+  const adminMode = pathname.startsWith("/admin");
+
+  const publicLinks = [
+    { href: "/", label: t("home"), icon: Home },
+    { href: "/teachings", label: t("videos"), icon: PlayCircle },
+    { href: "/testimonies", label: t("testimonies"), icon: MessageCircleHeart },
+    { href: "/prayer", label: t("prayerShort"), icon: Bell },
+    { href: "/admin/login", label: t("privateShort"), icon: LockKeyhole },
+  ];
+
+  const adminLinks = [
+    { href: "/admin", label: t("admin"), icon: Home },
+    { href: "/admin/publications", label: t("publish"), icon: Bell },
+    { href: "/admin/teachings", label: t("videos"), icon: PlayCircle },
+    { href: "/admin/testimonies", label: t("testimonies"), icon: MessageCircleHeart },
+    { href: "/admin/books", label: t("books"), icon: BookOpen },
+  ];
+
+  const links = adminMode ? adminLinks : publicLinks;
 
   return (
     <nav className="mobile-bottom-nav" aria-label="Navigation mobile">
@@ -44,12 +42,8 @@ export default function MobileBottomNav() {
         const active = isActive(pathname, link.href);
 
         return (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`mobile-bottom-link ${active ? "active" : ""}`}
-          >
-            <Icon size={20} />
+          <Link key={link.href} href={link.href} className={active ? "active" : ""}>
+            <Icon size={21} />
             <span>{link.label}</span>
           </Link>
         );

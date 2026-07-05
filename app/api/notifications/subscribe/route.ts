@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
+function normalizeLanguage(value: unknown) {
+  return value === "fr" || value === "ln" || value === "sw" || value === "en" || value === "es"
+    ? value
+    : "fr";
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const endpoint = body.endpoint as string | undefined;
     const p256dh = body.keys?.p256dh as string | undefined;
     const auth = body.keys?.auth as string | undefined;
+    const languageCode = normalizeLanguage(body.languageCode);
 
     if (!endpoint || !p256dh || !auth) {
       return NextResponse.json({ error: "Abonnement push invalide." }, { status: 400 });
@@ -19,6 +26,7 @@ export async function POST(request: NextRequest) {
         endpoint,
         p256dh,
         auth,
+        language_code: languageCode,
         user_agent: body.userAgent || null,
         full_name: body.fullName || null,
         phone: body.phone || null,

@@ -1,30 +1,31 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { createAdminClient } from "../../../../lib/supabase/admin";
 
-type PushRow = {
-  id?: string;
-  endpoint?: string | null;
-  p256dh?: string | null;
-  auth?: string | null;
-  subscription?: {
-    endpoint: string;
-    keys: { p256dh: string; auth: string };
-  } | null;
+type LanguageCode = "fr" | "ln" | "sw" | "en" | "es";
+
+type SubscriptionRow = {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  language_code: LanguageCode | null;
 };
 
-function getAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+type PublicationRow = {
+  id: string;
+  title: string;
+  content: string;
+  action_url: string | null;
+};
 
-  if (!supabaseUrl || !serviceKey) {
-    throw new Error("Missing Supabase admin environment variables.");
-  }
-
-  return createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false },
-  });
-}
+type TranslationRow = {
+  source_id: string;
+  language_code: LanguageCode;
+  title: string | null;
+  body: string | null;
+};
 
 function configureWebPush() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -32,112 +33,149 @@ function configureWebPush() {
   const subject = process.env.VAPID_SUBJECT || "mailto:contact@rbministries.app";
 
   if (!publicKey || !privateKey) {
-    throw new Error("Missing VAPID keys.");
+    throw new Error("VAPID keys are missing.");
   }
 
   webpush.setVapidDetails(subject, publicKey, privateKey);
 }
 
-function normalizeSubscription(row: PushRow) {
-  if (row.subscription?.endpoint && row.subscription?.keys) {
-    return row.subscription;
-  }
+async function verifyAdmin(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  const token = authHeader?.replace("Bearer ", "");
 
-  if (row.endpoint && row.p256dh && row.auth) {
-    return {
-      endpoint: row.endpoint,
-      keys: {
-        p256dh: row.p256dh,
-        auth: row.auth,
-      },
-    };
-  }
+  if (!token) return false;
 
-  return null;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !anonKey) return false;
+
+  const supabase = createClient(supabaseUrl, anonKey);
+  const { data, error } = await supabase.auth.getUser(token);
+
+  return !error && Boolean(data.user);
 }
 
-export async function POST(request: Request) {
+function truncate(value: string, length = 150) {
+  return value.length > length ? `${value.slice(0, length)}...` : value;
+}
+
+export async function POST(request: NextRequest) {
   try {
+    const isAdmin = await verifyAdmin(request);
+
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+    }
+
     configureWebPush();
-    const supabase = getAdminClient();
-    const body = await request.json().catch(() => ({}));
 
-    let payload = {
-      title: body.title || "Roy Bondo Ministries",
-      body: body.body || body.message || "Nouvelle publication du ministère.",
-      icon: "/images/logo_rb.png",
-      badge: "/images/logo_rb.png",
-      image: body.image || body.image_url || undefined,
-      url: body.url || "/",
-      publicationId: body.publicationId || body.publication_id || null,
-    };
+    const body = await request.json();
+    const publicationId = body.publicationId as string | undefined;
 
-    const publicationId = body.publicationId || body.publication_id;
-
-    if (publicationId) {
-      const { data: publication } = await supabase
-        .from("ministry_publications")
-        .select("*")
-        .eq("id", publicationId)
-        .maybeSingle();
-
-      if (publication) {
-        payload = {
-          title: publication.title || payload.title,
-          body:
-            publication.excerpt ||
-            publication.content ||
-            publication.message ||
-            publication.description ||
-            payload.body,
-          icon: "/images/logo_rb.png",
-          badge: "/images/logo_rb.png",
-          image: publication.image_url || publication.cover_url || payload.image,
-          url: `/publications/${publication.id}`,
-          publicationId: publication.id,
-        };
-      }
+    if (!publicationId) {
+      return NextResponse.json({ error: "publicationId manquant." }, { status: 400 });
     }
 
-    const { data: subscriptions, error } = await supabase
+    const supabase = createAdminClient();
+
+    const { data: publication, error: publicationError } = await supabase
+      .from("ministry_publications")
+      .select("id, title, content, action_url")
+      .eq("id", publicationId)
+      .single();
+
+    if (publicationError || !publication) {
+      return NextResponse.json(
+        { error: publicationError?.message || "Publication introuvable." },
+        { status: 404 }
+      );
+    }
+
+    const sourcePublication = publication as PublicationRow;
+
+    const { data: subscriptions, error: subscriptionsError } = await supabase
       .from("push_subscriptions")
-      .select("*");
+      .select("id, endpoint, p256dh, auth, language_code")
+      .eq("is_active", true);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (subscriptionsError) {
+      return NextResponse.json({ error: subscriptionsError.message }, { status: 500 });
     }
 
-    const rows = (subscriptions || []) as PushRow[];
-    let sent = 0;
-    let failed = 0;
+    const activeSubscriptions = (subscriptions || []) as SubscriptionRow[];
+
+    const { data: translationData } = await supabase
+      .from("content_translations")
+      .select("source_id, language_code, title, body")
+      .eq("source_table", "ministry_publications")
+      .eq("source_id", sourcePublication.id);
+
+    const translationByLanguage = new Map<LanguageCode, TranslationRow>();
+
+    ((translationData || []) as TranslationRow[]).forEach((translation) => {
+      translationByLanguage.set(translation.language_code, translation);
+    });
+
+    let successCount = 0;
+    let failureCount = 0;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+    const publicationUrl = `${siteUrl}/publications/${sourcePublication.id}`;
 
     await Promise.all(
-      rows.map(async (row) => {
-        const subscription = normalizeSubscription(row);
-        if (!subscription) return;
+      activeSubscriptions.map(async (subscription) => {
+        const language = subscription.language_code || "fr";
+        const translation = translationByLanguage.get(language);
+        const title = translation?.title || sourcePublication.title;
+        const content = translation?.body || sourcePublication.content;
+
+        const payload = JSON.stringify({
+          title,
+          body: truncate(content),
+          url: publicationUrl,
+        });
 
         try {
-          await webpush.sendNotification(subscription, JSON.stringify(payload));
-          sent += 1;
+          await webpush.sendNotification(
+            {
+              endpoint: subscription.endpoint,
+              keys: {
+                p256dh: subscription.p256dh,
+                auth: subscription.auth,
+              },
+            },
+            payload
+          );
+          successCount += 1;
         } catch {
-          failed += 1;
+          failureCount += 1;
+          await supabase
+            .from("push_subscriptions")
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .eq("id", subscription.id);
         }
       })
     );
 
     await supabase.from("notification_logs").insert({
-      title: payload.title,
-      body: payload.body,
-      target_url: payload.url,
-      publication_id: payload.publicationId,
-      sent_count: sent,
-      failed_count: failed,
+      publication_id: sourcePublication.id,
+      title: sourcePublication.title,
+      body: sourcePublication.content,
+      language_code: "multi",
+      target_count: activeSubscriptions.length,
+      success_count: successCount,
+      failure_count: failureCount,
     });
 
-    return NextResponse.json({ ok: true, sent, failed, url: payload.url });
+    return NextResponse.json({
+      ok: true,
+      targetCount: activeSubscriptions.length,
+      successCount,
+      failureCount,
+    });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { error: error instanceof Error ? error.message : "Erreur serveur." },
       { status: 500 }
     );
   }
