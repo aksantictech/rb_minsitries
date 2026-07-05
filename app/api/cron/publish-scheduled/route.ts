@@ -1,110 +1,55 @@
-import { NextRequest, NextResponse } from "next/server";
-import webpush from "web-push";
-import { createAdminClient } from "../../../../lib/supabase/admin";
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-function configureWebPush() {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || "mailto:contact@rbministries.app";
+function getAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!publicKey || !privateKey) {
-    throw new Error("VAPID keys are missing.");
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error("Missing Supabase admin environment variables.");
   }
 
-  webpush.setVapidDetails(subject, publicKey, privateKey);
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false },
+  });
 }
 
-export async function GET(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
-  const authorization = request.headers.get("authorization");
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const secret = url.searchParams.get("secret") || request.headers.get("x-cron-secret");
 
-  if (cronSecret && authorization !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    configureWebPush();
-    const supabase = createAdminClient();
-    const now = new Date().toISOString();
+  const supabase = getAdminClient();
 
-    const { data: publications, error } = await supabase
+  const { data: publications, error } = await supabase
+    .from("ministry_publications")
+    .select("*")
+    .lte("scheduled_at", new Date().toISOString())
+    .in("status", ["scheduled", "planned"]);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || url.origin;
+
+  for (const publication of publications || []) {
+    await supabase
       .from("ministry_publications")
-      .select("id, title, content, action_url, notify_on_publish")
-      .eq("status", "scheduled")
-      .eq("is_public", true)
-      .lte("scheduled_at", now);
+      .update({ status: "published", published_at: new Date().toISOString() })
+      .eq("id", publication.id);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    const { data: subscriptions } = await supabase
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth")
-      .eq("is_active", true);
-
-    for (const publication of publications || []) {
-      await supabase
-        .from("ministry_publications")
-        .update({
-          status: "published",
-          published_at: now,
-          updated_at: now,
-        })
-        .eq("id", publication.id);
-
-      if (!publication.notify_on_publish) continue;
-
-      let successCount = 0;
-      let failureCount = 0;
-      const payload = JSON.stringify({
-        title: publication.title,
-        body:
-          publication.content.length > 150
-            ? `${publication.content.slice(0, 150)}...`
-            : publication.content,
-        url: publication.action_url || "/",
-      });
-
-      await Promise.all(
-        (subscriptions || []).map(async (subscription) => {
-          try {
-            await webpush.sendNotification(
-              {
-                endpoint: subscription.endpoint,
-                keys: {
-                  p256dh: subscription.p256dh,
-                  auth: subscription.auth,
-                },
-              },
-              payload
-            );
-            successCount += 1;
-          } catch {
-            failureCount += 1;
-            await supabase
-              .from("push_subscriptions")
-              .update({ is_active: false, updated_at: now })
-              .eq("id", subscription.id);
-          }
-        })
-      );
-
-      await supabase.from("notification_logs").insert({
-        publication_id: publication.id,
-        title: publication.title,
-        body: publication.content,
-        target_count: subscriptions?.length || 0,
-        success_count: successCount,
-        failure_count: failureCount,
+    if (publication.notify_subscribers || publication.send_notification) {
+      await fetch(`${baseUrl}/api/notifications/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicationId: publication.id }),
       });
     }
-
-    return NextResponse.json({ ok: true, publishedCount: publications?.length || 0 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Erreur serveur." },
-      { status: 500 }
-    );
   }
+
+  return NextResponse.json({ ok: true, published: publications?.length || 0 });
 }

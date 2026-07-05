@@ -1,7 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
-import { createAdminClient } from "../../../../lib/supabase/admin";
+
+type PushRow = {
+  id?: string;
+  endpoint?: string | null;
+  p256dh?: string | null;
+  auth?: string | null;
+  subscription?: {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+  } | null;
+};
+
+function getAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error("Missing Supabase admin environment variables.");
+  }
+
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false },
+  });
+}
 
 function configureWebPush() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -9,124 +32,112 @@ function configureWebPush() {
   const subject = process.env.VAPID_SUBJECT || "mailto:contact@rbministries.app";
 
   if (!publicKey || !privateKey) {
-    throw new Error("VAPID keys are missing.");
+    throw new Error("Missing VAPID keys.");
   }
 
   webpush.setVapidDetails(subject, publicKey, privateKey);
 }
 
-async function verifyAdmin(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.replace("Bearer ", "");
+function normalizeSubscription(row: PushRow) {
+  if (row.subscription?.endpoint && row.subscription?.keys) {
+    return row.subscription;
+  }
 
-  if (!token) return false;
+  if (row.endpoint && row.p256dh && row.auth) {
+    return {
+      endpoint: row.endpoint,
+      keys: {
+        p256dh: row.p256dh,
+        auth: row.auth,
+      },
+    };
+  }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !anonKey) return false;
-
-  const supabase = createClient(supabaseUrl, anonKey);
-  const { data, error } = await supabase.auth.getUser(token);
-
-  return !error && Boolean(data.user);
+  return null;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const isAdmin = await verifyAdmin(request);
-
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-    }
-
     configureWebPush();
+    const supabase = getAdminClient();
+    const body = await request.json().catch(() => ({}));
 
-    const body = await request.json();
-    const publicationId = body.publicationId as string | undefined;
+    let payload = {
+      title: body.title || "Roy Bondo Ministries",
+      body: body.body || body.message || "Nouvelle publication du ministère.",
+      icon: "/images/logo_rb.png",
+      badge: "/images/logo_rb.png",
+      image: body.image || body.image_url || undefined,
+      url: body.url || "/",
+      publicationId: body.publicationId || body.publication_id || null,
+    };
 
-    if (!publicationId) {
-      return NextResponse.json({ error: "publicationId manquant." }, { status: 400 });
+    const publicationId = body.publicationId || body.publication_id;
+
+    if (publicationId) {
+      const { data: publication } = await supabase
+        .from("ministry_publications")
+        .select("*")
+        .eq("id", publicationId)
+        .maybeSingle();
+
+      if (publication) {
+        payload = {
+          title: publication.title || payload.title,
+          body:
+            publication.excerpt ||
+            publication.content ||
+            publication.message ||
+            publication.description ||
+            payload.body,
+          icon: "/images/logo_rb.png",
+          badge: "/images/logo_rb.png",
+          image: publication.image_url || publication.cover_url || payload.image,
+          url: `/publications/${publication.id}`,
+          publicationId: publication.id,
+        };
+      }
     }
 
-    const supabase = createAdminClient();
-
-    const { data: publication, error: publicationError } = await supabase
-      .from("ministry_publications")
-      .select("id, title, content, action_url")
-      .eq("id", publicationId)
-      .single();
-
-    if (publicationError || !publication) {
-      return NextResponse.json(
-        { error: publicationError?.message || "Publication introuvable." },
-        { status: 404 }
-      );
-    }
-
-    const { data: subscriptions, error: subscriptionsError } = await supabase
+    const { data: subscriptions, error } = await supabase
       .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth")
-      .eq("is_active", true);
+      .select("*");
 
-    if (subscriptionsError) {
-      return NextResponse.json({ error: subscriptionsError.message }, { status: 500 });
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    let successCount = 0;
-    let failureCount = 0;
-
-    const payload = JSON.stringify({
-      title: publication.title,
-      body:
-        publication.content.length > 150
-          ? `${publication.content.slice(0, 150)}...`
-          : publication.content,
-      url: publication.action_url || "/",
-    });
+    const rows = (subscriptions || []) as PushRow[];
+    let sent = 0;
+    let failed = 0;
 
     await Promise.all(
-      (subscriptions || []).map(async (subscription) => {
+      rows.map(async (row) => {
+        const subscription = normalizeSubscription(row);
+        if (!subscription) return;
+
         try {
-          await webpush.sendNotification(
-            {
-              endpoint: subscription.endpoint,
-              keys: {
-                p256dh: subscription.p256dh,
-                auth: subscription.auth,
-              },
-            },
-            payload
-          );
-          successCount += 1;
+          await webpush.sendNotification(subscription, JSON.stringify(payload));
+          sent += 1;
         } catch {
-          failureCount += 1;
-          await supabase
-            .from("push_subscriptions")
-            .update({ is_active: false, updated_at: new Date().toISOString() })
-            .eq("id", subscription.id);
+          failed += 1;
         }
       })
     );
 
     await supabase.from("notification_logs").insert({
-      publication_id: publication.id,
-      title: publication.title,
-      body: publication.content,
-      target_count: subscriptions?.length || 0,
-      success_count: successCount,
-      failure_count: failureCount,
+      title: payload.title,
+      body: payload.body,
+      target_url: payload.url,
+      publication_id: payload.publicationId,
+      sent_count: sent,
+      failed_count: failed,
     });
 
-    return NextResponse.json({
-      ok: true,
-      targetCount: subscriptions?.length || 0,
-      successCount,
-      failureCount,
-    });
+    return NextResponse.json({ ok: true, sent, failed, url: payload.url });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Erreur serveur." },
+      { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

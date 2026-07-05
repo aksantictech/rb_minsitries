@@ -4,17 +4,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Roy Bondo Ministries",
-  description:
-    "Application officielle du ministère pastoral Roy Bondo Ministries.",
+  description: "Application officielle du ministère pastoral Roy Bondo Ministries.",
   applicationName: "Roy Bondo Ministries",
   manifest: "/manifest.json",
   icons: {
-    icon: [
-      {
-        url: "/images/logo_rb.png",
-        type: "image/png",
-      },
-    ],
+    icon: [{ url: "/images/logo_rb.png", type: "image/png" }],
     shortcut: "/images/logo_rb.png",
     apple: "/images/logo_rb.png",
   },
@@ -32,11 +26,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
       <body>
